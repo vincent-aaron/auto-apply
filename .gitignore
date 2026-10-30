@@ -1,0 +1,70 @@
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# API keys & secrets tracker (HAS INSTRUCTIONS + may contain real keys - do not commit!)
+API_KEYS.md
+SECRETS.md
+*.key
+*.pem
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Playwright
+.playwright/
+browsers/
+Downloads/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Logs
+logs/
+*.log
+
+# Uploaded files
+uploads/
+resumes/
+
+# OS
+Thumbs.db
+.DS_Store

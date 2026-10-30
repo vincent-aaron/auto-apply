@@ -1,0 +1,108 @@
+name: Deploy to Oracle Cloud (push-to-deploy)
+
+# Push-to-deploy: every push to `main` builds a Docker image, pushes it to
+# GitHub Container Registry (GHCR), and SSH-deploys to your Oracle Cloud
+# Always-Free VM. No local Docker needed.
+#
+# ONE-TIME SETUP (do this once, in your browser):
+#   1. Get a free Oracle Cloud account: https://cloud.oracle.com
+#      → Always-Free VM: 2 vCPU / 1 GB RAM (AMD) or 4 vCPU / 24 GB RAM (ARM)
+#   2. Provision a VM (Ubuntu 24.04 LTS recommended). Note its public IP.
+#   3. In OCI Console → Networking → VCN → Security Lists → add Ingress:
+#      TCP 8080, Source 0.0.0.0/0
+#   4. Download the SSH private key (PEM) shown during VM creation.
+#   5. In THIS GitHub repo → Settings → Secrets and variables → Actions:
+#      - NEW REPOSITORY SECRET:  OCI_SSH_HOST  =  <VM public IP>
+#      - NEW REPOSITORY SECRET:  OCI_SSH_USER  =  opc     (or ubuntu)
+#      - NEW REPOSITORY SECRET:  OCI_SSH_KEY   =  <contents of the .pem file>
+#      - NEW REPOSITORY SECRET:  OPENROUTER_API_KEY =  <your free OpenRouter key>
+#         (leave empty to run with the 100 % offline AI fallback)
+#   6. Push to `main` → the workflow below deploys automatically.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  IMAGE_NAME: ghcr.io/${{ github.repository }}
+  TAG: ${{ github.sha }}
+  APP_PORT: 8080
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: ${{ env.TAG }},latest
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: SSH deploy to Oracle Cloud VM
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.OCI_SSH_HOST }}
+          username: ${{ secrets.OCI_SSH_USER }}
+          key: ${{ secrets.OCI_SSH_KEY }}
+          script: |
+            set -e
+            echo "==> Pulling image on VM..."
+            docker pull ${{ env.IMAGE_NAME }}:${{ env.TAG }}
+            docker tag ${{ env.IMAGE_NAME }}:${{ env.TAG }} ${{ env.IMAGE_NAME }}:latest
+
+            echo "==> Ensuring data volume exists..."
+            docker volume create autoapply-assistant-data
+
+            echo "==> Preparing env vars..."
+            # Build the env list dynamically; always include the fixed vars,
+            # and only include OPENROUTER_API_KEY if the secret is non-empty.
+            ENV_VARS="OPENROUTER_MODEL=google/gemma-4-31b-it:free,DATABASE_URL=sqlite:///./data/job_auto_apply.db,DEBUG=False"
+            if [ -n "${{ secrets.OPENROUTER_API_KEY }}" ]; then
+              ENV_VARS="$ENV_VARS,OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY }}"
+            fi
+
+            echo "==> Restarting container..."
+            docker rm -f autoapply-assistant 2>/dev/null || true
+            IFS=',' read -ra ENVV <<< "$ENV_VARS"
+            docker run -d \
+              --name autoapply-assistant \
+              --restart unless-stopped \
+              -p ${{ env.APP_PORT }}:${{ env.APP_PORT }} \
+              -v autoapply-assistant-data:/app/data \
+              "${ENVV[@]/#/--env }" \
+              ${{ env.IMAGE_NAME }}:${{ env.TAG }}
+
+      - name: Wait for deployment to become healthy
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS "http://${{ secrets.OCI_SSH_HOST }}:${{ env.APP_PORT }}/health" 2>/dev/null; then
+              echo "App is healthy!"
+              exit 0
+            fi
+            echo "Waiting for app to become healthy... (attempt $i)"
+            sleep 4
+          done
+          echo "::error::App did not become healthy in time"
+          exit 1

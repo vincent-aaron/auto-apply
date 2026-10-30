@@ -1,0 +1,44 @@
+# Build context / runtime artifacts
+Dockerfile
+.deploy-*
+.deploy/
+.git
+.gitignore
+.venv/
+venv/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+
+# Logs & local state
+.venv
+out.log
+err.log
+*.log
+pytest_output.txt
+.coverage
+htmlcov/
+
+# Data & secrets — NEVER copied into the image
+.env
+.env.*
+!.env.example
+API_KEYS.md
+SECRETS.md
+*.key
+*.pem
+*.crt
+*.db
+*.sqlite
+*.sqlite3
+data/
+.cache/
+.cache/**
+
+# Editor / OS cruft
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>JOBHUNT AI - Job Application Automation Assistant</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container nav-inner">
+            <div class="brand">
+                <span class="brand-logo">🤖</span>
+                <div>
+                    <h1>JOBHUNT AI</h1>
+                    <p class="tagline">Job Application Automation Assistant</p>
+                </div>
+            </div>
+            <ul class="nav-tabs" id="navTabs">
+                <li><button class="tab-btn active" data-tab="dashboard">Dashboard</button></li>
+                <li><button class="tab-btn" data-tab="profile">Profile</button></li>
+                <li><button class="tab-btn" data-tab="resume">Resume</button></li>
+                <li><button class="tab-btn" data-tab="settings">Settings</button></li>
+                <li><button class="tab-btn" data-tab="jobs">Jobs</button></li>
+                <li><button class="tab-btn" data-tab="applications">Applications</button></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Global notices -->
+        <div id="noticeBox"></div>
+        <div id="aiBanner" class="notice warning hidden"></div>
+
+        <!-- Dashboard -->
+        <section id="tab-dashboard" class="tab-panel active">
+            <div class="hero">
+                <h2>Track your entire job-search pipeline</h2>
+                <p>Discover jobs → match to your profile → prepare applications → submit &amp; track — all from one dashboard.</p>
+            </div>
+            <div class="stats-grid" id="statsGrid"></div>
+            <div class="grid-2">
+                <div class="card">
+                    <h3>🕒 Recent Searches</h3>
+                    <div id="recentSearches"><p class="muted">No searches yet.</p></div>
+                </div>
+                <div class="card">
+                    <h3>📌 Recent Jobs</h3>
+                    <div id="recentJobs"><p class="muted">No jobs yet. Run a search in the Jobs tab.</p></div>
+                </div>
+            </div>
+            <div class="card">
+                <h3>🚀 Quick Start</h3>
+                <ol class="steps">
+                    <li><button class="btn link-btn" data-goto="profile">1. Create your profile</button></li>
+                    <li><button class="btn link-btn" data-goto="resume">2. Upload &amp; verify your resume</button></li>
+                    <li><button class="btn link-btn" data-goto="settings">3. Configure your job filters</button></li>
+                    <li><button class="btn link-btn" data-goto="jobs">4. Search &amp; score jobs</button></li>
+                    <li><button class="btn link-btn" data-goto="applications">5. Review applications &amp; track status</button></li>
+                </ol>
+            </div>
+        </section>
+
+        <!-- Profile -->
+        <section id="tab-profile" class="tab-panel">
+            <div class="grid-2">
+                <div class="card">
+                    <h3>Select existing profile</h3>
+                    <div class="form-group">
+                        <label for="userSelect">Candidate</label>
+                        <select id="userSelect"><option value="">-- no profiles yet --</option></select>
+                    </div>
+                    <button class="btn secondary" id="btnUseUser" type="button">Use this profile</button>
+                </div>
+                <div class="card">
+                    <h3>Create new profile</h3>
+                    <form id="profileForm">
+                        <div class="form-group">
+                            <label for="pName">Full name *</label>
+                            <input id="pName" required placeholder="Juan Dela Cruz">
+                        </div>
+                        <div class="form-group">
+                            <label for="pEmail">Email *</label>
+                            <input id="pEmail" type="email" required placeholder="you@email.com">
+                        </div>
+                        <div class="form-group">
+                            <label for="pPhone">Phone</label>
+                            <input id="pPhone" placeholder="+63 9xx xxx xxxx">
+                        </div>
+                        <div class="form-group">
+                            <label for="pLocation">Location</label>
+                            <input id="pLocation" placeholder="Makati, Philippines">
+                        </div>
+                        <label class="checkbox-label">
+                            <input id="pFresh" type="checkbox" checked> I am a fresh graduate
+                        </label>
+                        <button class="btn success" type="submit">Create profile</button>
+                    </form>
+                </div>
+            </div>
+            <div class="card hidden" id="profileDetails"></div>
+        </section>
+<!-- Resume -->
+        <section id="tab-resume" class="tab-panel">
+            <div class="card">
+                <h3>Upload resume</h3>
+                <p class="muted">Supported formats: PDF or DOCX. After upload, run <strong>Extract</strong> to pull your information, then verify it.</p>
+                <form id="resumeForm">
+                    <div class="form-group">
+                        <label for="resumeFile">Resume file *</label>
+                        <input id="resumeFile" type="file" accept=".pdf,.docx" required>
+                    </div>
+                    <button class="btn" type="submit">Upload</button>
+                </form>
+                <div id="resumeList"></div>
+            </div>
+            <div class="card hidden" id="resumeDetail"></div>
+        </section>
+
+        <!-- Settings -->
+        <section id="tab-settings" class="tab-panel">
+            <div class="card">
+                <h3>Search &amp; application settings</h3>
+                <p class="muted">These settings drive filtering and matching. Save after editing.</p>
+                <form id="settingsForm">
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label for="sCountry">Target countries</label>
+                            <input id="sCountry" value="Philippines">
+                        </div>
+                        <div class="form-group">
+                            <label for="sMinSalary">Minimum salary (PHP / month)</label>
+                            <input id="sMinSalary" type="number" min="0" value="25000">
+                        </div>
+                        <div class="form-group">
+                            <label for="sDailyTarget">Daily application target</label>
+                            <input id="sDailyTarget" type="number" min="1" value="50">
+                        </div>
+                        <div class="form-group">
+                            <label for="sSources">Enabled job sources (comma separated)</label>
+                            <input id="sSources" value="indeed,jobstreet,kalibrr">
+                        </div>
+                    </div>
+                    <label class="checkbox-label"><input id="sRemote" type="checkbox" checked> Allow remote jobs</label>
+                    <label class="checkbox-label"><input id="sFresh" type="checkbox" checked> Allow fresh graduates</label>
+                    <div class="form-group">
+                        <label for="sExcluded">Excluded categories (comma separated)</label>
+                        <input id="sExcluded" value="BPO,Call Center,Customer Service,Sales,Marketing,Network Technician">
+                    </div>
+                    <button class="btn success" type="submit">Save settings</button>
+                </form>
+            </div>
+        </section>
+
+        <!-- Jobs -->
+        <section id="tab-jobs" class="tab-panel">
+            <div class="card">
+                <h3>Search jobs</h3>
+                <p class="muted">Runs an automated discovery against enabled job sources (filters applied automatically).</p>
+                <form id="searchForm" class="inline-form">
+                    <div class="form-group inline">
+                        <input id="searchQuery" placeholder="e.g. Junior Python Developer" value="Software Developer" required>
+                    </div>
+                    <div class="form-group inline">
+                        <select id="searchSources" multiple size="3"></select>
+                    </div>
+                    <button class="btn" type="submit">🔍 Search Jobs</button>
+                </form>
+                <p class="muted">Tip: Ctrl/Cmd+Click to select multiple sources.</p>
+                <div id="searchStatus"></div>
+                <div id="searchResultsStats"></div>
+            </div>
+            <div class="card">
+                <h3>Job listings <span class="badge info" id="jobCount">0</span></h3>
+                <div class="table-wrap">
+                    <table id="jobsTable">
+                        <thead><tr>
+                            <th>Title</th><th>Company</th><th>Location</th><th>Salary</th><th>Source</th><th>Actions</th>
+                        </tr></thead>
+                        <tbody id="jobsBody"></tbody>
+                    </table>
+                </div>
+            </div>
+<!-- Applications -->
+        <section id="tab-applications" class="tab-panel">
+            <div class="card">
+                <h3>Application lifecycle <span class="badge info" id="appCount">0</span></h3>
+                <p class="muted">Score a job to create an application, generate answers, prepare (browser automation), then mark submitted after you manually submit.</p>
+                <div class="table-wrap">
+                    <table id="appsTable">
+                        <thead><tr>
+                            <th>Job</th><th>Score</th><th>Status</th><th>Actions</th>
+                        </tr></thead>
+                        <tbody id="appsBody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card hidden" id="answersCard">
+                <h3>Generated answers</h3>
+                <div id="answersContent"></div>
+            </div>
+        </section>
+
+        <footer>
+            <p>JOBHUNT AI · FastAPI + SQLite + Playwright + Free OpenRouter AI · <span id="aiFooterBadge"></span></p>
+        </footer>
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>
+        </section>
