@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     openrouter_api_key: Optional[str] = None
     openrouter_model: str = "google/gemma-4-31b-it:free"
     # Or set OPENROUTER_MODEL to "openrouter/free" (auto-routes to a free model)
+    # Tried in order when the main model is rate-limited (free models often return 429)
+    openrouter_fallback_models: str = "openai/gpt-oss-20b:free,openrouter/free"
+    ai_max_retries: int = 2
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
     openrouter_site_url: Optional[str] = None   # Optional: your site URL (for rankings)
     openrouter_app_title: Optional[str] = None  # Optional: your app name (for rankings)
@@ -72,6 +75,11 @@ class Settings(BaseSettings):
         if self.enable_foundit:
             sources.append("foundit")
         return sources
+
+    @property
+    def openrouter_fallback_models_list(self) -> list[str]:
+        """Return fallback models as a list."""
+        return [m.strip() for m in self.openrouter_fallback_models.split(",") if m.strip()]
 
     @property
     def ai_enabled(self) -> bool:

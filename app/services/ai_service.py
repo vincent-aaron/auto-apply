@@ -1,6 +1,7 @@
 """AI service for LLM integration using the FREE OpenRouter API."""
 
 from typing import Optional, Dict, Any
+import asyncio
 import json
 import re
 import logging
@@ -25,6 +26,10 @@ class AIService:
 
         self.api_key = api_key or settings.openrouter_api_key
         self.model = model or settings.openrouter_model
+        self.fallback_models = [
+            m for m in settings.openrouter_fallback_models_list if m != self.model
+        ]
+        self.max_retries = settings.ai_max_retries
         self.base_url = settings.openrouter_base_url.rstrip("/")
         self.site_url = settings.openrouter_site_url
         self.app_title = settings.openrouter_app_title
@@ -183,18 +188,32 @@ of experience or skills they do not have.
             "temperature": temperature,
             "max_tokens": 2048,
         }
+        if self.fallback_models:
+            # OpenRouter tries these in order if the main model errors or is rate-limited
+            payload["models"] = [self.model] + self.fallback_models
 
+        last_error = "unknown error"
         async with httpx.AsyncClient(timeout=self.timeout) as client:
-            resp = await client.post(url, headers=headers, json=payload)
-            if resp.status_code != 200:
-                logger.error(f"OpenRouter error {resp.status_code}: {resp.text[:500]}")
-                raise RuntimeError(f"OpenRouter API error {resp.status_code}")
+            for attempt in range(self.max_retries + 1):
+                if attempt:
+                    await asyncio.sleep(2 * attempt)
+                resp = await client.post(url, headers=headers, json=payload)
+                if resp.status_code != 200:
+                    last_error = f"OpenRouter API error {resp.status_code}"
+                    logger.error(f"OpenRouter error {resp.status_code}: {resp.text[:500]}")
+                    if resp.status_code == 429 or resp.status_code >= 500:
+                        continue
+                    raise RuntimeError(last_error)
 
-            data = resp.json()
-            choices = data.get("choices") or []
-            if not choices:
-                raise RuntimeError("OpenRouter response has no choices")
-            return choices[0].get("message", {}).get("content", "")
+                data = resp.json()
+                choices = data.get("choices") or []
+                content = (choices[0].get("message") or {}).get("content") if choices else None
+                if content:
+                    return content
+                last_error = f"OpenRouter returned an empty answer (model {data.get('model')})"
+                logger.warning(last_error)
+
+        raise RuntimeError(last_error)
 
     # ------------------------------------------------------------------ #
     # JSON parsing
